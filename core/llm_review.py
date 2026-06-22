@@ -89,7 +89,6 @@ def run_llm_review(
 
     raw_text = message.choices[0].message.content.strip()
 
-    # Nettoyer les éventuels backticks markdown
     if raw_text.startswith("```"):
         raw_text = "\n".join(raw_text.split("\n")[1:])
     if raw_text.endswith("```"):
@@ -106,7 +105,6 @@ def run_llm_review(
     for item in data.get("issues", []):
         line = item.get("line", 1)
 
-        # En mode diff : ignorer les issues sur des lignes non touchées
         if changed_lines is not None and line not in changed_lines:
             continue
 
