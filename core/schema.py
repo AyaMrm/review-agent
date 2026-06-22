@@ -84,3 +84,28 @@ class ReviewReport(BaseModel):
             lines.append(issue.to_markdown())
             lines.append("")
         return "\n".join(lines)
+    
+    def deduplicate(self) -> "ReviewReport":
+        source_priority = {Source.LLM: 0, Source.BANDIT: 1, Source.RUFF: 2}
+        severity_order = {
+            Severity.CRITICAL: 0,
+            Severity.MAJOR: 1,
+            Severity.MINOR: 2,
+            Severity.INFO: 3,
+        }
+
+        seen: dict[tuple, Issue] = {}
+        for issue in self.issues:
+            key = (issue.file, issue.line, issue.category)
+            if key not in seen:
+                seen[key] = issue
+            else:
+                existing = seen[key]
+                if severity_order[issue.severity] < severity_order[existing.severity]:
+                    seen[key] = issue
+                elif (severity_order[issue.severity] == severity_order[existing.severity]
+                      and source_priority[issue.source] < source_priority[existing.source]):
+                    seen[key] = issue
+
+        self.issues = list(seen.values())
+        return self
