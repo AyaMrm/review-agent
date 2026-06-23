@@ -120,6 +120,17 @@ Exemples :
         action="store_true",
         help="Désactive l'analyse LLM (plus rapide, static analysis uniquement)",
     )
+    
+    parser.add_argument(
+        "--post",
+        action="store_true",
+        help="Poste les issues comme commentaires sur la PR GitHub (requiert --pr)",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Simule le posting sans appeler l'API GitHub (utile pour tester)",
+    )
 
     args = parser.parse_args()
     use_llm = not args.no_llm
@@ -141,6 +152,13 @@ Exemples :
         print(report.model_dump_json(indent=2))
     else:
         print(report.to_markdown())
+        
+        if getattr(args, "post", False) or getattr(args, "dry_run", False):
+            if not args.pr:
+                print("❌ --post et --dry-run nécessitent --pr")
+                sys.exit(1)
+            from core.github_commenter import post_review
+            post_review(report, pr_url=args.pr, dry_run=args.dry_run)
 
 
 if __name__ == "__main__":
