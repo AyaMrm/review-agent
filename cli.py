@@ -11,9 +11,15 @@ from core.tools.ruff_runner import run_ruff
 
 
 def review_full_file(filepath: str, use_llm: bool = True) -> ReviewReport:
-    """Analyse un fichier complet : static analysis + LLM (optionnel)."""
-    print(f"🔍 Analyse statique de {filepath}...")
-    issues = run_ruff(filepath) + run_bandit(filepath)
+    from core.language_detector import detect_language, run_static_analysis, get_llm_language_hint
+
+    language = detect_language(filepath)
+    if not language:
+        print(f"⚠️  Langage non supporté pour {filepath}. Langages supportés : Python, Rust")
+        return ReviewReport(target=filepath, mode="full_file", issues=[])
+
+    print(f"🔍 Analyse statique de {filepath} ({get_llm_language_hint(language)})...")
+    issues = run_static_analysis(filepath, language)
     print(f"   → {len(issues)} issue(s) trouvée(s) par les outils statiques")
 
     report = ReviewReport(target=filepath, mode="full_file", issues=issues)
@@ -29,7 +35,6 @@ def review_full_file(filepath: str, use_llm: bool = True) -> ReviewReport:
 
 
 def review_pr(pr_url: str, use_llm: bool = True) -> ReviewReport:
-    """Récupère une PR GitHub et analyse chaque fichier Python modifié."""
     from core.github_fetcher import fetch_pr_files
 
     print(f"\n📡 Récupération de la PR : {pr_url}")
@@ -155,7 +160,7 @@ Exemples :
         
         if getattr(args, "post", False) or getattr(args, "dry_run", False):
             if not args.pr:
-                print("❌ --post et --dry-run nécessitent --pr")
+                print(" !! --post et --dry-run nécessitent --pr")
                 sys.exit(1)
             from core.github_commenter import post_review
             post_review(report, pr_url=args.pr, dry_run=args.dry_run)
