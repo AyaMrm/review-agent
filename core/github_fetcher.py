@@ -1,7 +1,7 @@
 """
-1. Fetch : récupérer les fichiers modifiés d'une PR (nom, contenu, patch/diff)
-2. Parse : extraire les numéros de lignes touchées dans le diff
-   (utile pour filtrer les issues et ne commenter que les lignes réellement modifiées)
+1. Fetch: retrieve the modified files from a pull request (name, content, patch/diff)
+2. Parse: extract the touched line numbers from the diff
+   (useful for filtering issues and commenting only on lines that were actually modified)
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ class ChangedFile:
 
 
 def _parse_changed_lines(patch: str) -> set[int]:
-    # extract le num des lignes modifier 
+    # Extract the touched line numbers from the patch
     changed_lines: set[int] = set()
     current_line = 0
 
@@ -57,11 +57,11 @@ def _fetch_file_content(session: requests.Session, url: str) -> str | None:
 def fetch_pr_files(pr_url: str, python_only: bool = True) -> list[ChangedFile]:
     token = os.getenv("GITHUB_TOKEN")
     if not token:
-        raise RuntimeError("GITHUB_TOKEN manquant dans .env")
+        raise RuntimeError("GITHUB_TOKEN is missing from .env")
 
     match = re.match(r"https://github\.com/([^/]+)/([^/]+)/pull/(\d+)", pr_url)
     if not match:
-        raise ValueError(f"URL invalide : {pr_url}\nFormat attendu : https://github.com/owner/repo/pull/42")
+        raise ValueError(f"Invalid pull request URL: {pr_url}\nExpected format: https://github.com/owner/repo/pull/42")
 
     owner, repo, pr_number = match.group(1), match.group(2), match.group(3)
     api_base = f"https://api.github.com/repos/{owner}/{repo}/pulls/{pr_number}"
@@ -73,19 +73,19 @@ def fetch_pr_files(pr_url: str, python_only: bool = True) -> list[ChangedFile]:
         "X-GitHub-Api-Version": "2022-11-28",
     })
 
-    # verifier existance du pr
+    # Verify that the pull request exists
     pr_resp = session.get(api_base, timeout=10)
     if pr_resp.status_code == 404:
-        raise RuntimeError(f"PR introuvable : {pr_url}")
+        raise RuntimeError(f"Pull request not found: {pr_url}")
     if pr_resp.status_code == 401:
-        raise RuntimeError("Token GitHub invalide ou expiré.")
+        raise RuntimeError("GitHub token is invalid or expired.")
     pr_resp.raise_for_status()
 
     pr_data = pr_resp.json()
-    print(f"✅ PR trouvée : #{pr_number} — {pr_data['title']}")
-    print(f"   Branche : {pr_data['head']['ref']} → {pr_data['base']['ref']}")
+    print(f"✅ Pull request found: #{pr_number} - {pr_data['title']}")
+    print(f"   Branch: {pr_data['head']['ref']} -> {pr_data['base']['ref']}")
 
-    # recuperation de liste des files modif
+    # Retrieve the list of modified files
     files_url = f"{api_base}/files"
     all_files = []
     page = 1
@@ -98,7 +98,7 @@ def fetch_pr_files(pr_url: str, python_only: bool = True) -> list[ChangedFile]:
         all_files.extend(batch)
         page += 1
 
-    # parser et recuperer content de chaque file modif
+    # Parse and retrieve the content of each modified file
     changed_files: list[ChangedFile] = []
     for f in all_files:
         filename = f["filename"]
@@ -119,7 +119,7 @@ def fetch_pr_files(pr_url: str, python_only: bool = True) -> list[ChangedFile]:
             content=content,
             changed_lines=changed_lines,
         ))
-        print(f"{filename} ({f['status']}, {len(changed_lines)} ligne(s) touchée(s))")
+        print(f"{filename} ({f['status']}, {len(changed_lines)} touched line(s))")
 
-    print(f"\n→ {len(changed_files)} fichier(s) Python récupéré(s)")
+    print(f"\n-> {len(changed_files)} Python file(s) retrieved")
     return changed_files

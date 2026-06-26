@@ -14,7 +14,7 @@ load_dotenv()
 def _get_session() -> requests.Session:
     token = os.getenv("GITHUB_TOKEN")
     if not token:
-        raise RuntimeError("GITHUB_TOKEN manquant dans .env")
+        raise RuntimeError("GITHUB_TOKEN is missing from .env")
     session = requests.Session()
     session.headers.update({
         "Authorization": f"Bearer {token}",
@@ -27,7 +27,7 @@ def _get_session() -> requests.Session:
 def _parse_pr_url(pr_url: str) -> tuple[str, str, str]:
     match = re.match(r"https://github\.com/([^/]+)/([^/]+)/pull/(\d+)", pr_url)
     if not match:
-        raise ValueError(f"URL de PR invalide : {pr_url}")
+        raise ValueError(f"Invalid pull request URL: {pr_url}")
     return match.group(1), match.group(2), match.group(3)
 
 
@@ -89,14 +89,14 @@ def post_review(report: ReviewReport, pr_url: str, dry_run: bool = False) -> Non
     session = _get_session()
 
     if dry_run:
-        print(f"[DRY RUN] Simulation du posting sur {pr_url}")
-        print(f"[DRY RUN] {len(report.issues)} issues à poster\n")
+        print(f"[DRY RUN] Simulating posting on {pr_url}")
+        print(f"[DRY RUN] {len(report.issues)} issues to post\n")
         for issue in report.sorted_issues():
             print(f"  [{issue.severity.value.upper()}] {issue.file}:{issue.line} — {issue.title}")
         return
 
     head_sha = _get_pr_head_sha(session, owner, repo, pr_number)
-    print(f"- Posting sur PR #{pr_number} (sha: {head_sha[:8]}...)")
+    print(f"- Posting on pull request #{pr_number} (sha: {head_sha[:8]}...)")
 
     inline_posted = 0
     fallback_issues = []
@@ -111,7 +111,7 @@ def post_review(report: ReviewReport, pr_url: str, dry_run: bool = False) -> Non
         body = f"**{_severity_badge(issue.severity)} — {issue.title}**\n\n"
         body += f"{issue.explanation}\n"
         if issue.suggestion:
-            body += f"\n++ **Suggestion :** {issue.suggestion}\n"
+            body += f"\n++ **Suggestion:** {issue.suggestion}\n"
         body += f"\n<sub>Source: `{issue.source.value}`{f' · Rule: `{issue.rule_id}`' if issue.rule_id else ''}</sub>"
 
         resp = session.post(
@@ -129,16 +129,16 @@ def post_review(report: ReviewReport, pr_url: str, dry_run: bool = False) -> Non
         else:
             resp.raise_for_status()
             inline_posted += 1
-            print(f"   Inline : {issue.file}:{issue.line} — {issue.title}")
+            print(f"   Inline: {issue.file}:{issue.line} - {issue.title}")
 
     if fallback_issues:
-        lines = ["## Code Review — Issues supplémentaires\n"]
-        lines.append(f"*{len(fallback_issues)} issue(s) hors diff.*\n")
+        lines = ["## Code Review - Additional Issues\n"]
+        lines.append(f"*{len(fallback_issues)} issue(s) outside the diff.*\n")
         for issue in fallback_issues:
-            lines.append(f"### {_severity_badge(issue.severity)} — `{issue.file}:{issue.line}` — {issue.title}")
+            lines.append(f"### {_severity_badge(issue.severity)} - `{issue.file}:{issue.line}` - {issue.title}")
             lines.append(f"\n{issue.explanation}")
             if issue.suggestion:
-                lines.append(f"\n++ **Suggestion :** {issue.suggestion}")
+                lines.append(f"\n++ **Suggestion:** {issue.suggestion}")
             lines.append(f"\n<sub>Source: `{issue.source.value}`</sub>\n")
 
         resp = session.post(
@@ -147,6 +147,6 @@ def post_review(report: ReviewReport, pr_url: str, dry_run: bool = False) -> Non
             timeout=10,
         )
         resp.raise_for_status()
-        print(f"   Commentaire global posté ({len(fallback_issues)} issues)")
+        print(f"   Global comment posted ({len(fallback_issues)} issues)")
 
-    print(f"\nDone — {inline_posted} inline + {len(fallback_issues)} global")
+    print(f"\nDone - {inline_posted} inline + {len(fallback_issues)} global")

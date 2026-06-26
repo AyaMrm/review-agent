@@ -29,19 +29,19 @@ class Source(str, Enum):
 
 
 class Issue(BaseModel):
-    file: str = Field(..., description="Chemin du fichier concerné")
-    line: int = Field(..., description="Ligne de début de l'issue")
-    end_line: Optional[int] = Field(None, description="Ligne de fin si l'issue s'étend sur plusieurs lignes")
+    file: str = Field(..., description="Path to the affected file")
+    line: int = Field(..., description="Starting line of the issue")
+    end_line: Optional[int] = Field(None, description="Ending line if the issue spans multiple lines")
     column: Optional[int] = None
 
     severity: Severity
     category: Category
     source: Source
 
-    rule_id: Optional[str] = Field(None, description="Code de la règle (ex: 'E501', 'B608')")
-    title: str = Field(..., description="Résumé court de l'issue, une phrase")
-    explanation: str = Field(..., description="Pourquoi c'est un problème, en clair")
-    suggestion: Optional[str] = Field(None, description="Suggestion de fix, idéalement avec un snippet de code")
+    rule_id: Optional[str] = Field(None, description="Rule identifier (for example: 'E501', 'B608')")
+    title: str = Field(..., description="Short issue summary, one sentence")
+    explanation: str = Field(..., description="Plain-language explanation of why this is a problem")
+    suggestion: Optional[str] = Field(None, description="Suggested fix, ideally with a code snippet")
 
     def to_markdown(self) -> str:
         sev_emoji = {
@@ -51,15 +51,15 @@ class Issue(BaseModel):
             Severity.INFO: "🔵",
         }
         loc = f"{self.file}:{self.line}"
-        header = f"{sev_emoji[self.severity]} **{self.title}** — `{loc}` _(source: {self.source.value})_"
+        header = f"{sev_emoji[self.severity]} **{self.title}** - `{loc}` _(source: {self.source.value})_"
         body = f"\n  {self.explanation}"
-        fix = f"\n  💡 *Suggestion :* {self.suggestion}" if self.suggestion else ""
+        fix = f"\n  💡 *Suggestion:* {self.suggestion}" if self.suggestion else ""
         return f"{header}{body}{fix}"
 
 
 class ReviewReport(BaseModel):
-    target: str = Field(..., description="Fichier, PR ou diff analysé")
-    mode: str = Field(..., description="'full_file' ou 'diff'")
+    target: str = Field(..., description="Analyzed file, pull request, or diff")
+    mode: str = Field(..., description="'full_file' or 'diff'")
     issues: list[Issue] = Field(default_factory=list)
 
     def sorted_issues(self) -> list[Issue]:
@@ -73,12 +73,12 @@ class ReviewReport(BaseModel):
         return counts
 
     def to_markdown(self) -> str:
-        lines = [f"# Code Review — `{self.target}`\n"]
+        lines = [f"# Code Review - `{self.target}`\n"]
         s = self.summary()
         lines.append(
-            f"**{len(self.issues)} issue(s)** — "
-            f"🔴 {s['critical']} critique(s) · 🟠 {s['major']} majeure(s) · "
-            f"🟡 {s['minor']} mineure(s) · 🔵 {s['info']} info\n"
+            f"**{len(self.issues)} issue(s)** - "
+            f"critical: {s['critical']} | major: {s['major']} | "
+            f"minor: {s['minor']} | info: {s['info']}\n"
         )
         for issue in self.sorted_issues():
             lines.append(issue.to_markdown())

@@ -8,12 +8,12 @@ from pathlib import Path
 from core.schema import Category, Issue, Severity, Source
 
 RULE_PREFIX_MAP: dict[str, tuple[Category, Severity]] = {
-    "F821": (Category.BUG, Severity.CRITICAL),   # undefined name -> crash garanti
+    "F821": (Category.BUG, Severity.CRITICAL),   # undefined name -> guaranteed crash
     "F811": (Category.BUG, Severity.MAJOR),       # redefinition
     "F841": (Category.MAINTAINABILITY, Severity.MINOR),  # unused variable
     "F401": (Category.STYLE, Severity.MINOR),     # unused import
-    "F-": (Category.BUG, Severity.MAJOR),         # autres pyflakes par défaut
-    "E9": (Category.BUG, Severity.CRITICAL),       # syntax error
+    "F-": (Category.BUG, Severity.MAJOR),         # other pyflakes issues by default
+    "E9": (Category.BUG, Severity.CRITICAL),      # syntax error
     "E": (Category.STYLE, Severity.INFO),
     "W": (Category.STYLE, Severity.INFO),
     "C90": (Category.MAINTAINABILITY, Severity.MINOR),
@@ -36,7 +36,7 @@ def run_ruff(filepath: str, select: str = "ALL") -> list[Issue]:
         "ruff", "check",
         "--output-format=json",
         f"--select={select}",
-        "--ignore=D,ANN,PL,COM,EM,T20,TD,FIX", 
+        "--ignore=D,ANN,PL,COM,EM,T20,TD,FIX",
         filepath,
     ]
     proc = subprocess.run(cmd, capture_output=True, text=True)
