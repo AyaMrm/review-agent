@@ -56,22 +56,25 @@ def _get_diff_position(session, owner, repo, pr_number, filename, line) -> int |
 
         position = 0
         current_line = 0
-        for patch_line in patch.splitlines():
-            position += 1
-            hunk_match = re.match(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@", patch_line)
-            if hunk_match:
-                current_line = int(hunk_match.group(1))
-                continue
-            if patch_line.startswith("+") and not patch_line.startswith("+++"):
-                if current_line == line:
-                    return position
-                current_line += 1
-            elif patch_line.startswith("-") and not patch_line.startswith("---"):
-                pass
-            else:
-                if current_line == line:
-                    return position
-                current_line += 1
+        try:
+            for patch_line in patch.splitlines():
+                position += 1
+                hunk_match = re.match(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@", patch_line)
+                if hunk_match:
+                    current_line = int(hunk_match.group(1))
+                    continue
+                if patch_line.startswith("+") and not patch_line.startswith("+++"):
+                    if current_line == line:
+                        return position
+                    current_line += 1
+                elif patch_line.startswith("-") and not patch_line.startswith("---"):
+                    pass
+                else:
+                    if current_line == line:
+                        return position
+                    current_line += 1
+        except (ValueError, IndexError):
+            return None  
     return None
 
 

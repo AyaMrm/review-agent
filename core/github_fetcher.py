@@ -26,23 +26,25 @@ class ChangedFile:
 
 
 def _parse_changed_lines(patch: str) -> set[int]:
-    # Extract the touched line numbers from the patch
     changed_lines: set[int] = set()
     current_line = 0
 
     for line in patch.splitlines():
-        hunk_match = re.match(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@", line)
-        if hunk_match:
-            current_line = int(hunk_match.group(1))
-            continue
+        try:
+            hunk_match = re.match(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@", line)
+            if hunk_match:
+                current_line = int(hunk_match.group(1))
+                continue
 
-        if line.startswith("+") and not line.startswith("+++"):
-            changed_lines.add(current_line)
-            current_line += 1
-        elif line.startswith("-") and not line.startswith("---"):
-            pass 
-        else:
-            current_line += 1
+            if line.startswith("+") and not line.startswith("+++"):
+                changed_lines.add(current_line)
+                current_line += 1
+            elif line.startswith("-") and not line.startswith("---"):
+                pass 
+            else:
+                current_line += 1
+        except (ValueError, IndexError):
+            continue
 
     return changed_lines
 
@@ -53,8 +55,9 @@ def _fetch_file_content(session: requests.Session, url: str) -> str | None:
         return resp.text
     return None
 
+SUPPORTED_EXTENSIONS = {".py", ".rs"}
 
-def fetch_pr_files(pr_url: str, python_only: bool = True) -> list[ChangedFile]:
+def fetch_pr_files(pr_url: str, extensions: set[str] | None = None) -> list[ChangedFile]:
     token = os.getenv("GITHUB_TOKEN")
     if not token:
         raise RuntimeError("GITHUB_TOKEN is missing from .env")
@@ -103,7 +106,7 @@ def fetch_pr_files(pr_url: str, python_only: bool = True) -> list[ChangedFile]:
     for f in all_files:
         filename = f["filename"]
 
-        if python_only and not filename.endswith(".py"):
+        if extensions is not None and not any(filename.endswith(ext) for ext in extensions):
             continue
         if f["status"] == "removed":
             continue
@@ -121,5 +124,5 @@ def fetch_pr_files(pr_url: str, python_only: bool = True) -> list[ChangedFile]:
         ))
         print(f"{filename} ({f['status']}, {len(changed_lines)} touched line(s))")
 
-    print(f"\n-> {len(changed_files)} Python file(s) retrieved")
+    print(f"\n-> {len(changed_files)} file(s) retrieved")
     return changed_files
