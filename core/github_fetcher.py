@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import os
 import re
@@ -58,6 +58,9 @@ def fetch_pr_files(pr_url: str, extensions: set[str] | None = None) -> list[Chan
     if not token:
         raise RuntimeError("GITHUB_TOKEN is missing from .env")
 
+    if extensions is None:
+        extensions = SUPPORTED_EXTENSIONS
+
     match = re.match(r"https://github\.com/([^/]+)/([^/]+)/pull/(\d+)", pr_url)
     if not match:
         raise ValueError(
@@ -101,7 +104,7 @@ def fetch_pr_files(pr_url: str, extensions: set[str] | None = None) -> list[Chan
     for f in all_files:
         filename = f["filename"]
 
-        if extensions is not None and not any(filename.endswith(ext) for ext in extensions):
+        if not any(filename.endswith(ext) for ext in extensions):
             continue
         if f["status"] == "removed":
             continue

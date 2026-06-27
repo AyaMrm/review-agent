@@ -9,7 +9,7 @@ on:
 
 jobs:
   review:
-    name: Review Python Code
+    name: Review Code
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
@@ -24,9 +24,18 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
       - name: Install dependencies
         run: |
-          pip install ruff bandit pydantic requests python-dotenv groq
+          pip install -e .[dev]
+
+      - name: Run tests
+        run: |
+          python -m unittest discover -s tests
 
       - name: Run Review Agent
         env:

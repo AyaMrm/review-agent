@@ -48,10 +48,16 @@ An example is provided in `.env.example`.
 ```bash
 python -m venv .venv
 .venv\Scripts\activate
-pip install ruff bandit pydantic requests python-dotenv groq
+pip install -e .
 ```
 
 For Rust support, `cargo` must be installed to run `clippy`.
+
+For development and tests:
+
+```bash
+pip install -e .[dev]
+```
 
 ## Usage
 
@@ -138,7 +144,7 @@ Issues include:
 
 ## Known Limits
 
-- GitHub pull request review is currently centered on Python files.
+- GitHub pull request review supports Python and Rust, but LLM analysis is currently limited to Python.
 - LLM analysis depends on the Groq API being available.
 - The project expects `ruff`, `bandit`, and `cargo clippy` to be installed on the system.
 

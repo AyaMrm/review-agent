@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "review-agent"
+version = "0.1.0"
+description = "Automated code review assistant for Python and Rust pull requests"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "bandit",
+  "groq",
+  "pydantic",
+  "python-dotenv",
+  "requests",
+  "ruff",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+review-agent = "cli:main"
+
+[tool.setuptools]
+py-modules = ["cli"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["core*"]
