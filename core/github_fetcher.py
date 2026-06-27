@@ -1,10 +1,4 @@
-"""
-1. Fetch: retrieve the modified files from a pull request (name, content, patch/diff)
-2. Parse: extract the touched line numbers from the diff
-   (useful for filtering issues and commenting only on lines that were actually modified)
-"""
-
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import os
 import re
@@ -19,9 +13,9 @@ load_dotenv()
 @dataclass
 class ChangedFile:
     filename: str
-    status: str        
-    patch: str | None        
-    content: str | None    
+    status: str
+    patch: str | None
+    content: str | None
     changed_lines: set[int] = field(default_factory=set)
 
 
@@ -40,7 +34,7 @@ def _parse_changed_lines(patch: str) -> set[int]:
                 changed_lines.add(current_line)
                 current_line += 1
             elif line.startswith("-") and not line.startswith("---"):
-                pass 
+                pass
             else:
                 current_line += 1
         except (ValueError, IndexError):
@@ -55,7 +49,9 @@ def _fetch_file_content(session: requests.Session, url: str) -> str | None:
         return resp.text
     return None
 
+
 SUPPORTED_EXTENSIONS = {".py", ".rs"}
+
 
 def fetch_pr_files(pr_url: str, extensions: set[str] | None = None) -> list[ChangedFile]:
     token = os.getenv("GITHUB_TOKEN")
@@ -64,7 +60,9 @@ def fetch_pr_files(pr_url: str, extensions: set[str] | None = None) -> list[Chan
 
     match = re.match(r"https://github\.com/([^/]+)/([^/]+)/pull/(\d+)", pr_url)
     if not match:
-        raise ValueError(f"Invalid pull request URL: {pr_url}\nExpected format: https://github.com/owner/repo/pull/42")
+        raise ValueError(
+            f"Invalid pull request URL: {pr_url}\nExpected format: https://github.com/owner/repo/pull/42"
+        )
 
     owner, repo, pr_number = match.group(1), match.group(2), match.group(3)
     api_base = f"https://api.github.com/repos/{owner}/{repo}/pulls/{pr_number}"
@@ -76,7 +74,6 @@ def fetch_pr_files(pr_url: str, extensions: set[str] | None = None) -> list[Chan
         "X-GitHub-Api-Version": "2022-11-28",
     })
 
-    # Verify that the pull request exists
     pr_resp = session.get(api_base, timeout=10)
     if pr_resp.status_code == 404:
         raise RuntimeError(f"Pull request not found: {pr_url}")
@@ -85,10 +82,9 @@ def fetch_pr_files(pr_url: str, extensions: set[str] | None = None) -> list[Chan
     pr_resp.raise_for_status()
 
     pr_data = pr_resp.json()
-    print(f"✅ Pull request found: #{pr_number} - {pr_data['title']}")
-    print(f"   Branch: {pr_data['head']['ref']} -> {pr_data['base']['ref']}")
+    print(f"Pull request found: #{pr_number} - {pr_data['title']}")
+    print(f"  Branch: {pr_data['head']['ref']} -> {pr_data['base']['ref']}")
 
-    # Retrieve the list of modified files
     files_url = f"{api_base}/files"
     all_files = []
     page = 1
@@ -101,7 +97,6 @@ def fetch_pr_files(pr_url: str, extensions: set[str] | None = None) -> list[Chan
         all_files.extend(batch)
         page += 1
 
-    # Parse and retrieve the content of each modified file
     changed_files: list[ChangedFile] = []
     for f in all_files:
         filename = f["filename"]

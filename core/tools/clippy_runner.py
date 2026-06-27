@@ -122,7 +122,7 @@ def _parse_clippy_output(ndjson_output: str, base_path: str) -> list[Issue]:
             column=span["column_start"],
             severity=severity,
             category=category,
-            source=Source.RUFF,
+            source=Source.CLIPPY,
             rule_id=code,
             title=msg.get("message", "Clippy warning")[:80],
             explanation=msg.get("rendered", msg.get("message", "")).strip(),

@@ -8,9 +8,9 @@ from pydantic import BaseModel, Field
 
 class Severity(str, Enum):
     CRITICAL = "critical"
-    MAJOR = "major"    
-    MINOR = "minor"         
-    INFO = "info"           
+    MAJOR = "major"
+    MINOR = "minor"
+    INFO = "info"
 
 
 class Category(str, Enum):
@@ -25,6 +25,7 @@ class Category(str, Enum):
 class Source(str, Enum):
     RUFF = "ruff"
     BANDIT = "bandit"
+    CLIPPY = "clippy"
     LLM = "llm"
 
 
@@ -38,22 +39,16 @@ class Issue(BaseModel):
     category: Category
     source: Source
 
-    rule_id: Optional[str] = Field(None, description="Rule identifier (for example: 'E501', 'B608')")
+    rule_id: Optional[str] = Field(None, description="Rule identifier, for example: E501 or B608")
     title: str = Field(..., description="Short issue summary, one sentence")
     explanation: str = Field(..., description="Plain-language explanation of why this is a problem")
     suggestion: Optional[str] = Field(None, description="Suggested fix, ideally with a code snippet")
 
     def to_markdown(self) -> str:
-        sev_emoji = {
-            Severity.CRITICAL: "🔴",
-            Severity.MAJOR: "🟠",
-            Severity.MINOR: "🟡",
-            Severity.INFO: "🔵",
-        }
         loc = f"{self.file}:{self.line}"
-        header = f"{sev_emoji[self.severity]} **{self.title}** - `{loc}` _(source: {self.source.value})_"
+        header = f"**{self.title}** - `{loc}` _(source: {self.source.value})_"
         body = f"\n  {self.explanation}"
-        fix = f"\n  💡 *Suggestion:* {self.suggestion}" if self.suggestion else ""
+        fix = f"\n  Suggestion: {self.suggestion}" if self.suggestion else ""
         return f"{header}{body}{fix}"
 
 
@@ -84,9 +79,14 @@ class ReviewReport(BaseModel):
             lines.append(issue.to_markdown())
             lines.append("")
         return "\n".join(lines)
-    
+
     def deduplicate(self) -> "ReviewReport":
-        source_priority = {Source.LLM: 0, Source.BANDIT: 1, Source.RUFF: 2}
+        source_priority = {
+            Source.LLM: 0,
+            Source.BANDIT: 1,
+            Source.CLIPPY: 2,
+            Source.RUFF: 3,
+        }
         severity_order = {
             Severity.CRITICAL: 0,
             Severity.MAJOR: 1,
@@ -103,8 +103,10 @@ class ReviewReport(BaseModel):
                 existing = seen[key]
                 if severity_order[issue.severity] < severity_order[existing.severity]:
                     seen[key] = issue
-                elif (severity_order[issue.severity] == severity_order[existing.severity]
-                      and source_priority[issue.source] < source_priority[existing.source]):
+                elif (
+                    severity_order[issue.severity] == severity_order[existing.severity]
+                    and source_priority[issue.source] < source_priority[existing.source]
+                ):
                     seen[key] = issue
 
         self.issues = list(seen.values())

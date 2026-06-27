@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import os
 import re
@@ -74,16 +74,16 @@ def _get_diff_position(session, owner, repo, pr_number, filename, line) -> int |
                         return position
                     current_line += 1
         except (ValueError, IndexError):
-            return None  
+            return None
     return None
 
 
 def _severity_badge(severity: Severity) -> str:
     return {
-        Severity.CRITICAL: "🔴 CRITICAL",
-        Severity.MAJOR: "🟠 MAJOR",
-        Severity.MINOR: "🟡 MINOR",
-        Severity.INFO: "🔵 INFO",
+        Severity.CRITICAL: "CRITICAL",
+        Severity.MAJOR: "MAJOR",
+        Severity.MINOR: "MINOR",
+        Severity.INFO: "INFO",
     }[severity]
 
 
@@ -95,11 +95,11 @@ def post_review(report: ReviewReport, pr_url: str, dry_run: bool = False) -> Non
         print(f"[DRY RUN] Simulating posting on {pr_url}")
         print(f"[DRY RUN] {len(report.issues)} issues to post\n")
         for issue in report.sorted_issues():
-            print(f"  [{issue.severity.value.upper()}] {issue.file}:{issue.line} — {issue.title}")
+            print(f"  [{issue.severity.value.upper()}] {issue.file}:{issue.line} - {issue.title}")
         return
 
     head_sha = _get_pr_head_sha(session, owner, repo, pr_number)
-    print(f"- Posting on pull request #{pr_number} (sha: {head_sha[:8]}...)")
+    print(f"Posting on pull request #{pr_number} (sha: {head_sha[:8]}...)")
 
     inline_posted = 0
     fallback_issues = []
@@ -111,11 +111,11 @@ def post_review(report: ReviewReport, pr_url: str, dry_run: bool = False) -> Non
             fallback_issues.append(issue)
             continue
 
-        body = f"**{_severity_badge(issue.severity)} — {issue.title}**\n\n"
+        body = f"**{_severity_badge(issue.severity)} - {issue.title}**\n\n"
         body += f"{issue.explanation}\n"
         if issue.suggestion:
-            body += f"\n++ **Suggestion:** {issue.suggestion}\n"
-        body += f"\n<sub>Source: `{issue.source.value}`{f' · Rule: `{issue.rule_id}`' if issue.rule_id else ''}</sub>"
+            body += f"\nSuggestion: {issue.suggestion}\n"
+        body += f"\n<sub>Source: `{issue.source.value}`{f' | Rule: `{issue.rule_id}`' if issue.rule_id else ''}</sub>"
 
         resp = session.post(
             f"https://api.github.com/repos/{owner}/{repo}/pulls/{pr_number}/comments",
@@ -132,7 +132,7 @@ def post_review(report: ReviewReport, pr_url: str, dry_run: bool = False) -> Non
         else:
             resp.raise_for_status()
             inline_posted += 1
-            print(f"   Inline: {issue.file}:{issue.line} - {issue.title}")
+            print(f"  Inline: {issue.file}:{issue.line} - {issue.title}")
 
     if fallback_issues:
         lines = ["## Code Review - Additional Issues\n"]
@@ -141,7 +141,7 @@ def post_review(report: ReviewReport, pr_url: str, dry_run: bool = False) -> Non
             lines.append(f"### {_severity_badge(issue.severity)} - `{issue.file}:{issue.line}` - {issue.title}")
             lines.append(f"\n{issue.explanation}")
             if issue.suggestion:
-                lines.append(f"\n++ **Suggestion:** {issue.suggestion}")
+                lines.append(f"\nSuggestion: {issue.suggestion}")
             lines.append(f"\n<sub>Source: `{issue.source.value}`</sub>\n")
 
         resp = session.post(
@@ -150,6 +150,6 @@ def post_review(report: ReviewReport, pr_url: str, dry_run: bool = False) -> Non
             timeout=10,
         )
         resp.raise_for_status()
-        print(f"   Global comment posted ({len(fallback_issues)} issues)")
+        print(f"  Global comment posted ({len(fallback_issues)} issues)")
 
     print(f"\nDone - {inline_posted} inline + {len(fallback_issues)} global")
